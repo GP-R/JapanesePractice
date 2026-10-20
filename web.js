@@ -10,6 +10,8 @@
   let mode = null, db = null, json = '', previous = '', unity = null, ready = false;
   let writeQueue = Promise.resolve(), pendingWrites = 0, saveFailed = false, releaseLock;
   let input = null, descriptor = null, composing = false, deferredValue = null;
+  let compositionResetTimer = null;
+  const touchInput = () => matchMedia('(pointer: coarse)').matches;
   const send = (target, method, value) => unity?.SendMessage(target, method, value);
   const status = text => { $('save-status').textContent = text; };
   const error = text => { $('web-error').textContent = text; $('web-error').hidden = false; };
@@ -119,8 +121,13 @@
     };
     picker.click();
   }
-  function hideInput() { input?.remove(); input = null; descriptor = null; composing = false; deferredValue = null; }
+  function hideInput() {
+    clearTimeout(compositionResetTimer);
+    input?.remove(); input = null; descriptor = null; composing = false; deferredValue = null;
+  }
   function publishInput() {
+    // Ignore the old composition's final events after accepting a word.
+    if (input && deferredValue !== null) { input.value = deferredValue; return; }
     if (input && descriptor) send('__HaedokWeb','OnInput',JSON.stringify({id:descriptor.id,value:input.value}));
   }
   function positionInput() {
@@ -135,11 +142,24 @@
       input.className = 'native-input'; input.spellcheck = false; input.autocomplete = 'off';
       input.setAttribute('autocapitalize','off'); input.setAttribute('aria-label',d.typing ? '후리가나 또는 한자 입력' : (d.placeholder || '텍스트 입력'));
       input.value = d.value;
-      input.addEventListener('compositionstart', () => { composing = true; });
+      input.addEventListener('compositionstart', () => {
+        clearTimeout(compositionResetTimer);
+        composing = true; deferredValue = null;
+      });
+      input.addEventListener('beforeinput', event => {
+        // Some mobile keyboards start plain input instead of another composition.
+        if (!composing && !event.isComposing && !/composition/i.test(event.inputType || '')) deferredValue = null;
+      });
       input.addEventListener('input', publishInput);
       input.addEventListener('compositionend', () => {
         composing = false; publishInput();
-        if (deferredValue !== null) { input.value = deferredValue; deferredValue = null; }
+        // A final input event can follow compositionend in the same browser task.
+        if (deferredValue !== null) {
+          const endedInput = input;
+          compositionResetTimer = setTimeout(() => {
+            if (input === endedInput) deferredValue = null;
+          }, 0);
+        }
       });
       document.body.appendChild(input);
     }
@@ -147,14 +167,21 @@
     if (d.limit > 0) input.maxLength = d.limit; else input.removeAttribute('maxlength');
     positionInput();
     // On mobile a user tap may still be needed to open the software keyboard.
-    if (!matchMedia('(pointer: coarse)').matches) input.focus({preventScroll:true});
+    if (!touchInput()) input.focus({preventScroll:true});
   }
   function setInputValue(value) {
     if (!input) return;
-    // Blur commits/cancels the old IME session while Unity still guards the accepted word.
-    if (composing) { input.blur(); composing = false; deferredValue = null; }
+    if (composing) {
+      if (touchInput()) {
+        // Blurring a mobile input closes its keyboard; a timer cannot reliably reopen it.
+        // Keep this same focused element and drain any remaining composition events.
+        deferredValue = value;
+      } else {
+        input.blur(); composing = false; deferredValue = null;
+      }
+    }
     input.value = value;
-    if (!matchMedia('(pointer: coarse)').matches) input.focus({preventScroll:true});
+    if (!touchInput()) input.focus({preventScroll:true});
   }
   window.addEventListener('keydown', event => {
     if ($('cloud-dialog').open) return;
