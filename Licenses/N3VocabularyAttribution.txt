@@ -1,0 +1,69 @@
+HAEDOK N3 EXPANSION — 2026-10-04
+
+N3_03 through N3_05 contain 799 additional entries. Original N3_01/N3_02 (200 words) are unchanged. The three new resources are derived from OpenJLPT and distributed under CC BY-SA 4.0.
+https://creativecommons.org/licenses/by-sa/4.0/
+Full license: N2VocabularyLicense.txt (the same CC BY-SA 4.0 text).
+
+Source: https://github.com/evanclan/OpenJLPT
+https://github.com/evanclan/OpenJLPT/blob/bf4e1eecd5d11406aaecdee910464507aef7fcdc/data/json/vocab/n3.json
+Retrieved: 2026-10-02. Source revision: bf4e1eecd5d11406aaecdee910464507aef7fcdc
+
+Changes: selected intermediate vocabulary; removed duplicate headwords and a duplicate polite/plain form; authored Korean definitions and translations; replaced unsuitable examples with original sentences; standardized some headwords and readings; converted readings to parentheses; split into books of 300, 300 and 199 words.
+
+N3VocabularySources.txt records each entry and Tatoeba sentence/contributor link. 730 examples are from Tatoeba contributors (CC BY 2.0 FR); 69 examples were authored for Haedok and are marked Original Haedok example.
+
+Original upstream attribution notice follows (OpenJLPT features are not necessarily included in Haedok):
+
+# NOTICE — Data Sources & Attribution
+
+OpenJLPT is a **derived work**. It is assembled from the open sources below, plus original
+content written for the project (the grammar dataset and the corrections file). Because it
+incorporates data licensed under **CC BY-SA 4.0** (a share-alike license), the entire
+OpenJLPT dataset is released under **CC BY-SA 4.0** (see `LICENSE`).
+
+If you use OpenJLPT, you must:
+
+1. Give appropriate credit to OpenJLPT **and** the upstream sources listed here.
+2. Provide a link to the CC BY-SA 4.0 license.
+3. Distribute any derivative dataset under CC BY-SA 4.0 (ShareAlike).
+
+A line like this is enough:
+
+> Contains data from [OpenJLPT](https://github.com/evanclan/OpenJLPT) (CC BY-SA 4.0), which uses
+> JMdict and KANJIDIC2 (EDRDG), Jonathan Waller's JLPT lists, and Tatoeba.
+
+## Sources
+
+| Source | Used for | License | Link |
+|---|---|---|---|
+| **Jonathan Waller's JLPT Resources** (tanos.co.uk) | The **N5–N1 level assignments** for vocabulary and kanji, plus the English glosses for vocabulary. A verbatim snapshot is in `sources/waller/`. | CC BY | https://www.tanos.co.uk/jlpt/ |
+| **JMdict** — Electronic Dictionary Research and Development Group (EDRDG) | Vocabulary `jmdict_id` and `pos`, verification and repair of readings, spellings and truncated glosses | CC BY-SA 4.0 | https://www.edrdg.org/jmdict/j_jmdict.html |
+| **KANJIDIC2** — EDRDG | Kanji readings, meanings, stroke counts, grade, frequency, radical and name readings | CC BY-SA 4.0 | https://www.edrdg.org/wiki/KANJIDIC_Project.html |
+| **Tatoeba** | Vocabulary example sentences (Japanese + English), found via Tatoeba's Japanese word index (the Tanaka Corpus "B lines") | CC BY 2.0 FR | https://tatoeba.org |
+| **KanjiVG** (website only) | Stroke-order diagrams shown on the website's kanji pages; not included in the dataset | CC BY-SA 3.0 | https://kanjivg.tagaini.net/ |
+| **OpenJLPT contributors** | Grammar points (explanations and example sentences), `sources/corrections/` | CC BY-SA 4.0 | this repository |
+
+The EDRDG files (JMdict, KANJIDIC2) are the property of the Electronic Dictionary Research and
+Development Group, and are used in conformance with the Group's
+[licence](https://www.edrdg.org/edrdg/licence.html).
+
+Example sentences from [Tatoeba](https://tatoeba.org) are licensed
+[CC BY 2.0 FR](https://creativecommons.org/licenses/by/2.0/fr/). Each carries its Tatoeba
+sentence ID (`tatoeba_id`), which links to the sentence and its contributors at
+`https://tatoeba.org/sentences/show/<id>`. Combining CC BY material into this CC BY-SA 4.0
+dataset is permitted, and attribution to Tatoeba is given here.
+
+## Important note on JLPT levels
+
+The Japan Foundation / JLPT organisation does **not** publish official N5–N1 vocabulary, kanji
+or grammar lists. Vocabulary and kanji levels come from **Jonathan Waller's community-standard
+lists**, which are widely used and reliable, but they are *unofficial approximations* of the
+real (undisclosed) test content. KANJIDIC2's own `jlpt` field refers to the **pre-2010
+four-level system (1–4)** and is intentionally **not** used for level assignment. Grammar
+levels follow the consensus of common JLPT preparation materials.
+
+## Data freshness
+
+Per the EDRDG license, projects redistributing this data should keep it reasonably current.
+OpenJLPT rebuilds from upstream monthly (`.github/workflows/update-data.yml`), and
+`data/json/meta.json` records the upstream versions used.

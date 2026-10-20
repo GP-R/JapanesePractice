@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+  <meta name="theme-color" content="#f6f7ef">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>회독 — 나의 일본어 서재</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="web.css">
+</head>
+<body>
+  <section id="welcome" aria-labelledby="welcome-title">
+    <div class="welcome-card">
+      <p class="eyebrow">HAEDOK · WEB PREVIEW</p>
+      <h1 id="welcome-title">조금씩, 여러 번.<br>오늘도 나의 속도로.</h1>
+      <p>단어를 만나고, 기억하고, 다시 읽어요.<br>나만의 일본어 단어장을 시작해 보세요.</p>
+      <button id="start-trial" class="primary">저장 없이 체험하기</button>
+      <p class="caption">로그인 없이 모든 학습 기능을 사용해요.<br>체험 기록은 새로고침하거나 나가면 사라져요.</p>
+      <button id="start-local">이 브라우저에 저장하며 시작</button>
+      <p class="caption">이 기기·브라우저에서 이어서 학습해요.<br>사이트 데이터를 지우면 기록도 삭제돼요.</p>
+      <button id="google-login">구글 로그인으로 이어서 학습</button>
+      <p class="caption">같은 계정으로 단어장과 진도를 이어가요.<br>기존 브라우저 기록은 선택한 경우에만 가져와요.</p>
+      <p id="welcome-error" role="alert"></p>
+    </div>
+  </section>
+  <main id="app" hidden>
+    <header id="web-toolbar">
+      <div><strong>회독</strong><span id="save-status" role="status" aria-live="polite"></span></div>
+      <nav aria-label="저장 관리">
+        <span id="account-controls" hidden><span id="account-name"></span><button id="sync-now">동기화</button><button id="sign-out">로그아웃</button></span>
+        <button id="backup" disabled>백업 저장</button>
+        <button id="restore" disabled>백업 불러오기</button>
+        <button id="home">시작 화면</button>
+      </nav>
+    </header>
+    <div id="player-area">
+      <canvas id="unity-canvas" tabindex="0" aria-label="회독 학습 화면"></canvas>
+      <div id="loading" role="status"><strong>서재를 준비하고 있어요</strong><progress id="progress" max="1" value="0"></progress><p>처음에는 학습 자료를 내려받아 조금 걸릴 수 있어요.</p></div>
+    </div>
+    <p id="web-error" role="alert" hidden></p>
+    <p id="cloud-error" role="alert" hidden></p>
+  </main>
+  <dialog id="cloud-dialog" aria-labelledby="cloud-title" aria-describedby="cloud-description">
+    <h2 id="cloud-title"></h2>
+    <p id="cloud-description"></p>
+    <div id="cloud-actions"></div>
+  </dialog>
+  <input id="csv-upload" type="file" accept=".csv,text/csv" hidden>
+  <input id="backup-upload" type="file" accept=".json,application/json" hidden>
+  <script src="cloud.js"></script>
+  <script>
+    window.HaedokLaunch = async function () {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script'); script.src = 'Build/Haedok-Web.loader.js';
+        script.onload = resolve; script.onerror = () => reject(new Error('학습 화면 파일을 내려받지 못했어요. 연결을 확인해 주세요.'));
+        document.body.appendChild(script);
+      });
+      const instance = await createUnityInstance(document.getElementById('unity-canvas'), {
+        dataUrl: 'Build/Haedok-Web.data.unityweb',
+        frameworkUrl: 'Build/Haedok-Web.framework.js.unityweb',
+        codeUrl: 'Build/Haedok-Web.wasm.unityweb',
+        streamingAssetsUrl: 'StreamingAssets',
+        companyName: "HaedokLab",
+        productName: "Haedok",
+        productVersion: "2.0.2",
+        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+        showBanner: (message, type) => { if (type === 'error') window.HaedokWeb.error('학습 화면 오류: ' + message); }
+      }, value => { document.getElementById('progress').value = value; });
+      window.HaedokWeb.attach(instance);
+    };
+  </script>
+  <script src="web.js"></script>
+</body>
+</html>

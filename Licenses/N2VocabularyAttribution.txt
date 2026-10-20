@@ -1,0 +1,21 @@
+Haedok N2 expansion vocabulary attribution
+
+The six expansion files N2_03.txt through N2_08.txt contain adapted vocabulary data and newly authored Korean meanings, Japanese examples, annotated example readings and Korean translations. They are distributed under Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0).
+https://creativecommons.org/licenses/by-sa/4.0/
+See the bundled N2VocabularyLicense.txt for the full license.
+
+Vocabulary selection, headwords and readings were referenced from Jonathan Waller's JLPT Resources, provided by Tanos under Creative Commons BY (as stated on the original site's sharing page):
+https://www.tanos.co.uk/jlpt/
+https://www.tanos.co.uk/jlpt/sharing/
+
+The machine-readable reference was original_data/n2.csv from stephenmk/yomitan-jlpt-vocab, whose repository is licensed CC BY-SA 4.0:
+https://github.com/stephenmk/yomitan-jlpt-vocab
+Data file commit: f92f43449d8ecb5692065f7e9c407b243ca939b1
+Retrieved 2026-10-01.
+
+Changes made for Haedok: removed duplicates and spelling/inflection aliases; standardized some uncommon spellings; corrected selected readings and glosses; wrote Korean meanings and original Japanese examples, example furigana and Korean translations; supplemented the selection with related reading-practice vocabulary; split the resulting data into six books of at most 300 entries.
+
+This is an independently assembled N2 study and reading-practice selection. It is not an official or exhaustive JLPT vocabulary syllabus and is not endorsed by JLPT, Tanos or the reference repository's contributors. The JLPT does not publish a fixed official vocabulary list.
+https://www.jlpt.jp/e/faq/
+
+This notice applies to the six N2 expansion data files. It does not change the separate licenses of Unity, fonts or unrelated app assets.

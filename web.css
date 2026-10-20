@@ -1,0 +1,52 @@
+:root { color-scheme: light; --paper:#f6f7ef; --ink:#303b2d; --accent:#4d5d34; --soft:#e7ecdd; --danger:#8b352c; }
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+body { margin:0; background:var(--paper); color:var(--ink); font:15px/1.6 system-ui,"Noto Sans",sans-serif; }
+button { color:var(--ink); background:var(--soft); border:0; border-radius:12px; padding:10px 16px; font:inherit; cursor:pointer; }
+button:hover { filter:brightness(.96); }
+button:focus-visible { outline:3px solid #75884a; outline-offset:3px; }
+button:disabled { opacity:.5; cursor:default; }
+.primary { background:var(--accent); color:white; }
+#welcome { min-height:100dvh; display:grid; place-items:center; padding:32px 22px; }
+.welcome-card { width:min(100%,420px); }
+.eyebrow { font-size:12px; letter-spacing:.18em; color:#718061; }
+h1 { font-size:clamp(28px,7vw,36px); line-height:1.4; margin:22px 0; }
+.welcome-card>button { width:100%; margin-top:18px; padding:15px; }
+.caption { font-size:12px; color:#6a765c; margin:8px 0 12px; }
+#welcome-error,#web-error { color:var(--danger); }
+#app { height:100dvh; display:flex; flex-direction:column; max-width:560px; margin:auto; }
+#web-toolbar { flex:none; padding:6px max(12px,env(safe-area-inset-right)) 6px max(12px,env(safe-area-inset-left)); border-bottom:1px solid #dfe4d4; background:var(--paper); }
+#web-toolbar>div { display:flex; gap:12px; align-items:center; font-size:12px; }
+#save-status { color:#63734b; }
+#web-toolbar nav { display:flex; gap:6px; margin-top:4px; }
+#web-toolbar nav { flex-wrap:wrap; }
+#account-controls { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+#account-name { font-size:11px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#cloud-error { margin:0; padding:8px 12px; font-size:12px; background:#fbe9e2; color:var(--danger); }
+#cloud-dialog { width:min(92vw,480px); max-height:90dvh; overflow:auto; border:1px solid #dfe4d4; border-radius:20px; padding:28px; color:var(--ink); background:var(--paper); }
+#cloud-dialog::backdrop { background:#20281899; }
+#cloud-dialog h2 { font-size:22px; margin:0 0 16px; }
+#cloud-actions { display:grid; gap:12px; margin-top:24px; }
+#cloud-actions button { width:100%; }
+#web-toolbar button { font-size:11px; padding:5px 9px; border-radius:7px; }
+#player-area { position:relative; flex:1; min-height:0; }
+#unity-canvas { display:block; width:100%; height:100%; outline:none; touch-action:none; }
+#loading { position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:24px; text-align:center; background:var(--paper); }
+#loading p { font-size:12px; color:#6a765c; }
+progress { width:70%; height:8px; margin-top:22px; accent-color:var(--accent); }
+#web-error { margin:0; padding:8px 12px; font-size:12px; background:#fbe9e2; }
+.native-input { position:fixed; z-index:10; margin:0; padding:8px 12px; border:0; border-radius:12px; outline:2px solid #819264; font-family:system-ui,sans-serif; resize:none; box-sizing:border-box; }
+
+/* PC shell. Learning layouts are authored in Prefabs/Desktop, not in CSS. */
+.desktop #app { max-width:1600px; min-width:960px; min-height:640px; border-inline:1px solid #e1e6d7; }
+.desktop #web-toolbar { display:flex; align-items:center; justify-content:space-between; padding:12px 32px; min-height:60px; }
+.desktop #web-toolbar>div { gap:20px; font-size:13px; }
+.desktop #web-toolbar nav { margin:0; gap:10px; }
+.desktop #web-toolbar button { font-size:12px; padding:7px 14px; }
+.desktop #welcome { background:radial-gradient(ellipse at 20% 40%,#e8eddf,transparent 65%); }
+.desktop .welcome-card { width:860px; display:grid; grid-template-columns:1.15fr 1fr; column-gap:70px; align-items:center; }
+.desktop .welcome-card .eyebrow { grid-column:1; grid-row:1; align-self:end; }
+.desktop .welcome-card h1 { grid-column:1; grid-row:2 / 5; font-size:42px; align-self:start; }
+.desktop .welcome-card>p:not([class]):not([id]) { grid-column:1; grid-row:5 / 8; align-self:start; }
+.desktop .welcome-card>button,.desktop .welcome-card>.caption,.desktop #welcome-error { grid-column:2; }
+.desktop .welcome-card>button { margin-top:12px; }
