@@ -25,22 +25,29 @@
     </div>
   </section>
   <main id="app" hidden>
-    <header id="web-toolbar">
-      <div><strong>회독</strong><span id="save-status" role="status" aria-live="polite"></span></div>
-      <nav aria-label="저장 관리">
-        <span id="account-controls" hidden><span id="account-name"></span><button id="sync-now">동기화</button><button id="sign-out">로그아웃</button></span>
-        <button id="backup" disabled>백업 저장</button>
-        <button id="restore" disabled>백업 불러오기</button>
-        <button id="home">시작 화면</button>
-      </nav>
-    </header>
     <div id="player-area">
       <canvas id="unity-canvas" tabindex="0" aria-label="회독 학습 화면"></canvas>
-      <div id="loading" role="status"><strong>서재를 준비하고 있어요</strong><progress id="progress" max="1" value="0"></progress><p>처음에는 학습 자료를 내려받아 조금 걸릴 수 있어요.</p></div>
+      <div id="loading" role="status"><strong>서재를 준비하고 있어요</strong><progress id="progress" max="1" value="0"></progress><p>처음에는 학습 자료를 내려받아 조금 걸릴 수 있어요.</p><button id="recovery-about" hidden>저장 관리 열기</button></div>
     </div>
     <p id="web-error" role="alert" hidden></p>
     <p id="cloud-error" role="alert" hidden></p>
   </main>
+  <dialog id="about-dialog" aria-labelledby="about-title">
+    <header class="dialog-header"><h2 id="about-title">About · 나의 회독</h2><button id="about-close" aria-label="About 닫기">닫기</button></header>
+    <p class="caption">조금씩, 여러 번. 나의 속도로.</p>
+    <p id="save-status" role="status" aria-live="polite"></p>
+    <div id="account-controls" hidden>
+      <p id="account-name"></p>
+      <div class="about-actions"><button id="sync-now">동기화</button><button id="sign-out">로그아웃</button></div>
+    </div>
+    <nav class="about-actions" aria-label="저장 관리">
+      <button id="backup" disabled>백업 저장</button>
+      <button id="restore" disabled>백업 불러오기</button>
+      <button id="about-guide">앱 사용 안내</button>
+      <button id="home">시작 화면</button>
+    </nav>
+    <p class="caption">PC 타자연습: F1 후리가나 · F2 뜻 표시<br>F3 즐겨찾기 · F4 이전 단어</p>
+  </dialog>
   <dialog id="cloud-dialog" aria-labelledby="cloud-title" aria-describedby="cloud-description">
     <h2 id="cloud-title"></h2>
     <p id="cloud-description"></p>

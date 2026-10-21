@@ -15,6 +15,11 @@
   const send = (target, method, value) => unity?.SendMessage(target, method, value);
   const status = text => { $('save-status').textContent = text; };
   const error = text => { $('web-error').textContent = text; $('web-error').hidden = false; };
+  const modalOpen = () => $('about-dialog').open || $('cloud-dialog').open;
+  function showAbout() {
+    if (input) input.hidden = true;
+    if (!$('about-dialog').open) $('about-dialog').showModal();
+  }
 
   function openDatabase() {
     return new Promise((resolve, reject) => {
@@ -77,7 +82,11 @@
         releaseLock?.(); db?.close(); db = null;
         $('welcome-error').textContent = failure.message;
         for (const id of ['start-trial','start-local','google-login']) $(id).disabled = false;
-      } else error(failure.message || String(failure));
+      } else {
+        error(failure.message || String(failure));
+        $('recovery-about').hidden = false;
+        $('backup').disabled = !json;
+      }
     }
   }
   function save(value) {
@@ -164,10 +173,11 @@
       document.body.appendChild(input);
     }
     descriptor = d; input.placeholder = d.placeholder; input.readOnly = d.readOnly;
+    input.hidden = $('about-dialog').open;
     if (d.limit > 0) input.maxLength = d.limit; else input.removeAttribute('maxlength');
     positionInput();
     // On mobile a user tap may still be needed to open the software keyboard.
-    if (!touchInput()) input.focus({preventScroll:true});
+    if (!touchInput() && !modalOpen()) input.focus({preventScroll:true});
   }
   function setInputValue(value) {
     if (!input) return;
@@ -181,11 +191,14 @@
       }
     }
     input.value = value;
-    if (!touchInput()) input.focus({preventScroll:true});
+    if (!touchInput() && !modalOpen()) input.focus({preventScroll:true});
   }
   window.addEventListener('keydown', event => {
-    if ($('cloud-dialog').open) return;
-    if (descriptor?.typing && ['F1','F2','F3'].includes(event.key)) {
+    if (modalOpen()) {
+      if (['F1','F2','F3','F4'].includes(event.key)) { event.preventDefault(); event.stopImmediatePropagation(); }
+      return;
+    }
+    if (descriptor?.typing && ['F1','F2','F3','F4'].includes(event.key)) {
       event.preventDefault(); event.stopImmediatePropagation();
       if (!event.repeat) send('__HaedokWeb','OnShortcut',event.key);
     } else if (event.target === input) event.stopImmediatePropagation();
@@ -201,6 +214,10 @@
   $('google-login').onclick = () => start('cloud');
   $('sync-now').onclick = () => window.HaedokCloud.sync();
   $('sign-out').onclick = () => window.HaedokCloud.logout();
+  $('about-close').onclick = () => $('about-dialog').close();
+  $('about-dialog').addEventListener('close', () => { if (input) input.hidden = false; });
+  $('about-guide').onclick = () => { $('about-dialog').close(); send('__HaedokWeb','ShowGuide',''); };
+  $('recovery-about').onclick = showAbout;
   $('home').onclick = async () => {
     if (mode === 'cloud') {
       await window.HaedokCloud.sync();
@@ -218,16 +235,18 @@
       const text = await file.text(); const data = JSON.parse(text);
       if (data.schemaVersion !== 1 || !Array.isArray(data.decks) || !Array.isArray(data.folders)) throw new Error('회독 앱의 JSON 백업 파일이 아니에요.');
       if (!confirm('현재 단어장과 진도를 이 백업으로 바꿀까요? 현재 기록이 필요하면 먼저 백업 저장을 해주세요.')) return;
+      $('about-dialog').close();
       send('__HaedokWeb','ImportBackup',text);
     } catch (failure) { error(failure.message); }
   };
   window.HaedokWeb = {
-    readSave:() => json, isTrial:() => mode === 'trial', isDesktop:() => desktop, save, download, openCsv, showInput, setInputValue, hideInput, error,
+    readSave:() => json, isTrial:() => mode === 'trial', isDesktop:() => desktop, save, download, openCsv, showInput, setInputValue, hideInput, showAbout, error,
     attach:instance => { unity = instance; if (ready) $('loading').hidden = true; },
     failed:message => {
       $('loading').querySelector('strong').textContent = '저장 기록을 확인해 주세요';
       $('loading').querySelector('p').textContent = message;
       $('progress').hidden = true; $('backup').disabled = !json; $('restore').disabled = false;
+      $('recovery-about').hidden = false;
     },
     ready:() => { ready = true; $('loading').hidden = true; $('backup').disabled = false; $('restore').disabled = false; }
   };
