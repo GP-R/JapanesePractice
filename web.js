@@ -9,8 +9,7 @@
   document.documentElement.classList.toggle('desktop', desktop);
   let mode = null, db = null, json = '', previous = '', unity = null, ready = false;
   let writeQueue = Promise.resolve(), pendingWrites = 0, saveFailed = false, releaseLock;
-  let input = null, descriptor = null, composing = false, deferredValue = null;
-  let compositionResetTimer = null;
+  let input = null, descriptor = null, composing = false, clearedComposition = null;
   const touchInput = () => matchMedia('(pointer: coarse)').matches;
   const send = (target, method, value) => unity?.SendMessage(target, method, value);
   const status = text => { $('save-status').textContent = text; };
@@ -131,19 +130,26 @@
     picker.click();
   }
   function hideInput() {
-    clearTimeout(compositionResetTimer);
-    input?.remove(); input = null; descriptor = null; composing = false; deferredValue = null;
+    input?.remove(); input = null; descriptor = null; composing = false; clearedComposition = null;
   }
   function publishInput() {
-    // Ignore the old composition's final events after accepting a word.
-    if (input && deferredValue !== null) { input.value = deferredValue; return; }
+    if (!input) return;
+    // Only discard the just-cleared text's immediate IME tail. Some mobile keyboards
+    // continue composing the next answer without ever sending compositionend.
+    if (clearedComposition) {
+      if (performance.now() >= clearedComposition.until) clearedComposition = null;
+      else if (input.value === clearedComposition.text || input.value === clearedComposition.replacement) {
+        input.value = clearedComposition.replacement; return;
+      } else clearedComposition = null;
+    }
     if (input && descriptor) send('__HaedokWeb','OnInput',JSON.stringify({id:descriptor.id,value:input.value}));
   }
   function positionInput() {
     if (!input || !descriptor) return;
-    const rect = $('unity-canvas').getBoundingClientRect(), d = descriptor;
-    Object.assign(input.style, {left:rect.left + d.x*rect.width+'px',top:rect.top+d.y*rect.height+'px',
-      width:d.width*rect.width+'px',height:d.height*rect.height+'px',fontSize:Math.max(16,d.fontSize*rect.height)+'px',color:d.color,background:d.background});
+    // Share the canvas's positioned parent so keyboard scrolling moves both together.
+    const canvas = $('unity-canvas'), d = descriptor, width = canvas.clientWidth, height = canvas.clientHeight;
+    Object.assign(input.style, {left:canvas.offsetLeft+d.x*width+'px',top:canvas.offsetTop+d.y*height+'px',
+      width:d.width*width+'px',height:d.height*height+'px',fontSize:Math.max(16,d.fontSize*height)+'px',color:d.color,background:d.background});
   }
   function showInput(d) {
     if (!input || descriptor?.id !== d.id) {
@@ -152,25 +158,21 @@
       input.setAttribute('autocapitalize','off'); input.setAttribute('aria-label',d.typing ? '후리가나 또는 한자 입력' : (d.placeholder || '텍스트 입력'));
       input.value = d.value;
       input.addEventListener('compositionstart', () => {
-        clearTimeout(compositionResetTimer);
-        composing = true; deferredValue = null;
+        composing = true; clearedComposition = null;
       });
       input.addEventListener('beforeinput', event => {
-        // Some mobile keyboards start plain input instead of another composition.
-        if (!composing && !event.isComposing && !/composition/i.test(event.inputType || '')) deferredValue = null;
-      });
-      input.addEventListener('input', publishInput);
-      input.addEventListener('compositionend', () => {
-        composing = false; publishInput();
-        // A final input event can follow compositionend in the same browser task.
-        if (deferredValue !== null) {
-          const endedInput = input;
-          compositionResetTimer = setTimeout(() => {
-            if (input === endedInput) deferredValue = null;
-          }, 0);
+        if (!event.isComposing && !/composition/i.test(event.inputType || '')) {
+          composing = false; clearedComposition = null;
         }
       });
-      document.body.appendChild(input);
+      input.addEventListener('input', event => {
+        composing = event.isComposing;
+        publishInput();
+      });
+      input.addEventListener('compositionend', () => {
+        composing = false; publishInput();
+      });
+      $('player-area').appendChild(input);
     }
     descriptor = d; input.placeholder = d.placeholder; input.readOnly = d.readOnly;
     input.hidden = $('about-dialog').open;
@@ -180,14 +182,13 @@
     if (!touchInput() && !modalOpen()) input.focus({preventScroll:true});
   }
   function setInputValue(value) {
-    if (!input) return;
+    if (!input || input.value === value) return;
     if (composing) {
       if (touchInput()) {
-        // Blurring a mobile input closes its keyboard; a timer cannot reliably reopen it.
-        // Keep this same focused element and drain any remaining composition events.
-        deferredValue = value;
+        // Keep the focused element and keyboard. Never wait indefinitely for IME completion.
+        clearedComposition = {text:input.value, replacement:value, until:performance.now()+150};
       } else {
-        input.blur(); composing = false; deferredValue = null;
+        input.blur(); composing = false; clearedComposition = null;
       }
     }
     input.value = value;
@@ -206,6 +207,7 @@
   window.addEventListener('keyup', event => { if (event.target === input) event.stopImmediatePropagation(); }, true);
   window.addEventListener('resize',positionInput);
   window.visualViewport?.addEventListener('resize',positionInput);
+  new ResizeObserver(positionInput).observe($('unity-canvas'));
   window.addEventListener('beforeunload', event => {
     if ((mode === 'local' && (pendingWrites || saveFailed)) || (mode === 'cloud' && window.HaedokCloud.pending())) { event.preventDefault(); event.returnValue = ''; }
   });
