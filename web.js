@@ -143,11 +143,43 @@
   }
   function keyboardViewport() {
     const viewport = window.visualViewport;
-    const editing = document.activeElement?.classList.contains('native-input');
-    const reduced = touchInput() && editing && viewport && viewport.height < window.innerHeight - 80;
+    // Safari pans the visual viewport as well as shrinking it. A height-only fix
+    // puts part of the canvas above the visible page and leaves a blank strip below.
+    const top = viewport ? Math.max(0, viewport.offsetTop, viewport.pageTop - window.scrollY) : 0;
+    const reduced = touchInput() && viewport && (viewport.height < window.innerHeight - 80 || top > 1);
     $('app').style.setProperty('--keyboard-height', (viewport?.height || window.innerHeight)+'px');
+    $('app').style.setProperty('--keyboard-top', top+'px');
     $('app').classList.toggle('keyboard-open', Boolean(reduced));
     positionInputs();
+  }
+  function createNativeInput(record, value) {
+    const d = record.descriptor;
+    const element = document.createElement(d.multiline ? 'textarea' : 'input');
+    element.className = 'native-input'; element.spellcheck = false; element.autocomplete = 'off';
+    element.setAttribute('autocapitalize','off');
+    element.value = value; // Initialize before focus, when this field has no IME composition.
+    element.addEventListener('compositionstart', () => {
+      if (record.element === element) record.composing = true;
+    });
+    element.addEventListener('compositionend', () => {
+      if (record.element === element) record.composing = false;
+    });
+    element.addEventListener('input', event => {
+      // A retired field may emit its final composition event during the focus handoff.
+      if (record.element !== element) return;
+      if (event.isComposing) record.composing = true;
+      send('__HaedokWeb','OnInput',JSON.stringify({id:record.descriptor.id,value:element.value}));
+    });
+    element.addEventListener('focus', keyboardViewport);
+    element.addEventListener('blur', keyboardViewport);
+    return element;
+  }
+  function configureNativeInput(record) {
+    const {element, descriptor:d} = record;
+    element.setAttribute('aria-label',d.typing ? '후리가나 또는 한자 입력' : (d.placeholder || '텍스트 입력'));
+    element.placeholder = d.placeholder; element.readOnly = d.readOnly;
+    element.hidden = modalOpen();
+    if (d.limit > 0) element.maxLength = d.limit; else element.removeAttribute('maxlength');
   }
   function syncInputs(snapshot) {
     const visible = new Set(snapshot.fields.map(d => d.id));
@@ -158,27 +190,27 @@
       let record = inputFields.get(d.id);
       const created = !record;
       if (created) {
-        const element = document.createElement(d.multiline ? 'textarea' : 'input');
-        record = {element, descriptor:d}; inputFields.set(d.id, record);
-        element.className = 'native-input'; element.spellcheck = false; element.autocomplete = 'off';
-        element.setAttribute('autocapitalize','off');
-        element.addEventListener('input', () => {
-          // One input source. Never cancel, suppress or wait for a mobile IME composition.
-          send('__HaedokWeb','OnInput',JSON.stringify({id:d.id,value:element.value}));
-        });
-        element.addEventListener('focus', keyboardViewport);
-        element.addEventListener('blur', keyboardViewport);
-        $('player-area').appendChild(element);
+        record = {element:null, descriptor:d, composing:false}; inputFields.set(d.id, record);
+        record.element = createNativeInput(record, d.value);
+        $('player-area').appendChild(record.element);
       }
       record.descriptor = d;
-      const element = record.element;
-      element.setAttribute('aria-label',d.typing ? '후리가나 또는 한자 입력' : (d.placeholder || '텍스트 입력'));
-      element.placeholder = d.placeholder; element.readOnly = d.readOnly;
-      element.hidden = modalOpen();
-      if (d.limit > 0) element.maxLength = d.limit; else element.removeAttribute('maxlength');
-      if (element.value !== d.value) element.value = d.value;
+      if (record.element.value !== d.value && record.composing) {
+        // Never overwrite a live IME composition: iOS can stop accepting text and
+        // desktop IMEs can resurrect the previous answer. Keep the keyboard session
+        // by focusing the new field while the old field is still attached and focused.
+        const previous = record.element, focused = document.activeElement === previous;
+        record.element = createNativeInput(record, d.value);
+        record.composing = false;
+        record.element.style.cssText = previous.style.cssText;
+        configureNativeInput(record);
+        $('player-area').appendChild(record.element);
+        if (focused && !record.element.hidden && !d.readOnly) record.element.focus({preventScroll:true});
+        previous.remove();
+      } else if (record.element.value !== d.value) record.element.value = d.value;
+      configureNativeInput(record);
       // Desktop typing starts focused. Touch screens use the real, already-present input.
-      if (created && d.typing && !touchInput() && !modalOpen()) element.focus({preventScroll:true});
+      if (created && d.typing && !touchInput() && !modalOpen()) record.element.focus({preventScroll:true});
     }
     keyboardViewport();
   }
@@ -201,7 +233,9 @@
     if (event.target.classList?.contains('native-input')) event.stopImmediatePropagation();
   }, true);
   window.addEventListener('resize',keyboardViewport);
+  window.addEventListener('scroll',keyboardViewport,{passive:true});
   window.visualViewport?.addEventListener('resize',keyboardViewport);
+  window.visualViewport?.addEventListener('scroll',keyboardViewport,{passive:true});
   new ResizeObserver(positionInputs).observe($('unity-canvas'));
   window.addEventListener('beforeunload', event => {
     if ((mode === 'local' && (pendingWrites || saveFailed)) || (mode === 'cloud' && window.HaedokCloud.pending())) { event.preventDefault(); event.returnValue = ''; }
