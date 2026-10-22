@@ -9,14 +9,14 @@
   document.documentElement.classList.toggle('desktop', desktop);
   let mode = null, db = null, json = '', previous = '', unity = null, ready = false;
   let writeQueue = Promise.resolve(), pendingWrites = 0, saveFailed = false, releaseLock;
-  let input = null, descriptor = null, composing = false, clearedComposition = null;
+  const inputFields = new Map();
   const touchInput = () => matchMedia('(pointer: coarse)').matches;
   const send = (target, method, value) => unity?.SendMessage(target, method, value);
   const status = text => { $('save-status').textContent = text; };
   const error = text => { $('web-error').textContent = text; $('web-error').hidden = false; };
   const modalOpen = () => $('about-dialog').open || $('cloud-dialog').open;
   function showAbout() {
-    if (input) input.hidden = true;
+    for (const {element} of inputFields.values()) element.hidden = true;
     if (!$('about-dialog').open) $('about-dialog').showModal();
   }
 
@@ -129,85 +129,80 @@
     };
     picker.click();
   }
-  function hideInput() {
-    input?.remove(); input = null; descriptor = null; composing = false; clearedComposition = null;
-  }
-  function publishInput() {
-    if (!input) return;
-    // Only discard the just-cleared text's immediate IME tail. Some mobile keyboards
-    // continue composing the next answer without ever sending compositionend.
-    if (clearedComposition) {
-      if (performance.now() >= clearedComposition.until) clearedComposition = null;
-      else if (input.value === clearedComposition.text || input.value === clearedComposition.replacement) {
-        input.value = clearedComposition.replacement; return;
-      } else clearedComposition = null;
+  function positionInputs() {
+    const canvas = $('unity-canvas'), width = canvas.clientWidth, height = canvas.clientHeight;
+    for (const {element, descriptor:d} of inputFields.values()) {
+      Object.assign(element.style, {
+        left:canvas.offsetLeft+d.x*width+'px', top:canvas.offsetTop+d.y*height+'px',
+        width:d.width*width+'px', height:d.height*height+'px',
+        fontSize:Math.max(16,d.fontSize*height)+'px', color:d.color, background:d.background,
+        clipPath:d.clipTop||d.clipRight||d.clipBottom||d.clipLeft
+          ? `inset(${(d.clipTop||0)*100}% ${(d.clipRight||0)*100}% ${(d.clipBottom||0)*100}% ${(d.clipLeft||0)*100}%)` : 'none'
+      });
     }
-    if (input && descriptor) send('__HaedokWeb','OnInput',JSON.stringify({id:descriptor.id,value:input.value}));
   }
-  function positionInput() {
-    if (!input || !descriptor) return;
-    // Share the canvas's positioned parent so keyboard scrolling moves both together.
-    const canvas = $('unity-canvas'), d = descriptor, width = canvas.clientWidth, height = canvas.clientHeight;
-    Object.assign(input.style, {left:canvas.offsetLeft+d.x*width+'px',top:canvas.offsetTop+d.y*height+'px',
-      width:d.width*width+'px',height:d.height*height+'px',fontSize:Math.max(16,d.fontSize*height)+'px',color:d.color,background:d.background});
+  function keyboardViewport() {
+    const viewport = window.visualViewport;
+    const editing = document.activeElement?.classList.contains('native-input');
+    const reduced = touchInput() && editing && viewport && viewport.height < window.innerHeight - 80;
+    $('app').style.setProperty('--keyboard-height', (viewport?.height || window.innerHeight)+'px');
+    $('app').classList.toggle('keyboard-open', Boolean(reduced));
+    positionInputs();
   }
-  function showInput(d) {
-    if (!input || descriptor?.id !== d.id) {
-      hideInput(); input = document.createElement(d.multiline ? 'textarea' : 'input');
-      input.className = 'native-input'; input.spellcheck = false; input.autocomplete = 'off';
-      input.setAttribute('autocapitalize','off'); input.setAttribute('aria-label',d.typing ? '후리가나 또는 한자 입력' : (d.placeholder || '텍스트 입력'));
-      input.value = d.value;
-      input.addEventListener('compositionstart', () => {
-        composing = true; clearedComposition = null;
-      });
-      input.addEventListener('beforeinput', event => {
-        if (!event.isComposing && !/composition/i.test(event.inputType || '')) {
-          composing = false; clearedComposition = null;
-        }
-      });
-      input.addEventListener('input', event => {
-        composing = event.isComposing;
-        publishInput();
-      });
-      input.addEventListener('compositionend', () => {
-        composing = false; publishInput();
-      });
-      $('player-area').appendChild(input);
+  function syncInputs(snapshot) {
+    const visible = new Set(snapshot.fields.map(d => d.id));
+    for (const [id, record] of inputFields) {
+      if (!visible.has(id)) { record.element.remove(); inputFields.delete(id); }
     }
-    descriptor = d; input.placeholder = d.placeholder; input.readOnly = d.readOnly;
-    input.hidden = $('about-dialog').open;
-    if (d.limit > 0) input.maxLength = d.limit; else input.removeAttribute('maxlength');
-    positionInput();
-    // On mobile a user tap may still be needed to open the software keyboard.
-    if (!touchInput() && !modalOpen()) input.focus({preventScroll:true});
-  }
-  function setInputValue(value) {
-    if (!input || input.value === value) return;
-    if (composing) {
-      if (touchInput()) {
-        // Keep the focused element and keyboard. Never wait indefinitely for IME completion.
-        clearedComposition = {text:input.value, replacement:value, until:performance.now()+150};
-      } else {
-        input.blur(); composing = false; clearedComposition = null;
+    for (const d of snapshot.fields) {
+      let record = inputFields.get(d.id);
+      const created = !record;
+      if (created) {
+        const element = document.createElement(d.multiline ? 'textarea' : 'input');
+        record = {element, descriptor:d}; inputFields.set(d.id, record);
+        element.className = 'native-input'; element.spellcheck = false; element.autocomplete = 'off';
+        element.setAttribute('autocapitalize','off');
+        element.addEventListener('input', () => {
+          // One input source. Never cancel, suppress or wait for a mobile IME composition.
+          send('__HaedokWeb','OnInput',JSON.stringify({id:d.id,value:element.value}));
+        });
+        element.addEventListener('focus', keyboardViewport);
+        element.addEventListener('blur', keyboardViewport);
+        $('player-area').appendChild(element);
       }
+      record.descriptor = d;
+      const element = record.element;
+      element.setAttribute('aria-label',d.typing ? '후리가나 또는 한자 입력' : (d.placeholder || '텍스트 입력'));
+      element.placeholder = d.placeholder; element.readOnly = d.readOnly;
+      element.hidden = modalOpen();
+      if (d.limit > 0) element.maxLength = d.limit; else element.removeAttribute('maxlength');
+      if (element.value !== d.value) element.value = d.value;
+      // Desktop typing starts focused. Touch screens use the real, already-present input.
+      if (created && d.typing && !touchInput() && !modalOpen()) element.focus({preventScroll:true});
     }
-    input.value = value;
-    if (!touchInput() && !modalOpen()) input.focus({preventScroll:true});
+    keyboardViewport();
   }
+  window.addEventListener('pointerdown', event => {
+    const active = document.activeElement;
+    if (active?.classList.contains('native-input') && event.target !== active) active.blur();
+  }, true);
   window.addEventListener('keydown', event => {
+    const shortcut = ['F1','F2','F3','F4'].includes(event.key);
     if (modalOpen()) {
-      if (['F1','F2','F3','F4'].includes(event.key)) { event.preventDefault(); event.stopImmediatePropagation(); }
+      if (shortcut) { event.preventDefault(); event.stopImmediatePropagation(); }
       return;
     }
-    if (descriptor?.typing && ['F1','F2','F3','F4'].includes(event.key)) {
+    if (shortcut && [...inputFields.values()].some(record => record.descriptor.typing)) {
       event.preventDefault(); event.stopImmediatePropagation();
       if (!event.repeat) send('__HaedokWeb','OnShortcut',event.key);
-    } else if (event.target === input) event.stopImmediatePropagation();
+    } else if (event.target.classList?.contains('native-input')) event.stopImmediatePropagation();
   }, true);
-  window.addEventListener('keyup', event => { if (event.target === input) event.stopImmediatePropagation(); }, true);
-  window.addEventListener('resize',positionInput);
-  window.visualViewport?.addEventListener('resize',positionInput);
-  new ResizeObserver(positionInput).observe($('unity-canvas'));
+  window.addEventListener('keyup', event => {
+    if (event.target.classList?.contains('native-input')) event.stopImmediatePropagation();
+  }, true);
+  window.addEventListener('resize',keyboardViewport);
+  window.visualViewport?.addEventListener('resize',keyboardViewport);
+  new ResizeObserver(positionInputs).observe($('unity-canvas'));
   window.addEventListener('beforeunload', event => {
     if ((mode === 'local' && (pendingWrites || saveFailed)) || (mode === 'cloud' && window.HaedokCloud.pending())) { event.preventDefault(); event.returnValue = ''; }
   });
@@ -217,7 +212,9 @@
   $('sync-now').onclick = () => window.HaedokCloud.sync();
   $('sign-out').onclick = () => window.HaedokCloud.logout();
   $('about-close').onclick = () => $('about-dialog').close();
-  $('about-dialog').addEventListener('close', () => { if (input) input.hidden = false; });
+  for (const id of ['about-dialog','cloud-dialog']) $(id).addEventListener('close', () => {
+    for (const {element} of inputFields.values()) element.hidden = modalOpen();
+  });
   $('about-guide').onclick = () => { $('about-dialog').close(); send('__HaedokWeb','ShowGuide',''); };
   $('recovery-about').onclick = showAbout;
   $('home').onclick = async () => {
@@ -242,7 +239,7 @@
     } catch (failure) { error(failure.message); }
   };
   window.HaedokWeb = {
-    readSave:() => json, isTrial:() => mode === 'trial', isDesktop:() => desktop, save, download, openCsv, showInput, setInputValue, hideInput, showAbout, error,
+    readSave:() => json, isTrial:() => mode === 'trial', isDesktop:() => desktop, save, download, openCsv, syncInputs, showAbout, error,
     attach:instance => { unity = instance; if (ready) $('loading').hidden = true; },
     failed:message => {
       $('loading').querySelector('strong').textContent = '저장 기록을 확인해 주세요';

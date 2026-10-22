@@ -35,7 +35,7 @@ h1 { font-size:clamp(28px,7vw,36px); line-height:1.4; margin:22px 0; }
 #loading p { font-size:12px; color:#6a765c; }
 progress { width:70%; height:8px; margin-top:22px; accent-color:var(--accent); }
 #web-error { margin:0; padding:8px 12px; font-size:12px; background:#fbe9e2; }
-.native-input { position:absolute; z-index:10; margin:0; padding:8px 12px; border:0; border-radius:12px; outline:2px solid #819264; font-family:system-ui,sans-serif; resize:none; box-sizing:border-box; }
+.native-input { position:absolute; z-index:10; margin:0; padding:8px 12px; border:0; border-radius:12px; outline:none; font-family:system-ui,sans-serif; resize:none; box-sizing:border-box; }
 
 /* PC shell. Learning layouts are authored in Prefabs/Desktop, not in CSS. */
 .desktop #app { max-width:1600px; min-width:960px; min-height:640px; border-inline:1px solid #e1e6d7; }
@@ -46,3 +46,6 @@ progress { width:70%; height:8px; margin-top:22px; accent-color:var(--accent); }
 .desktop .welcome-card>p:not([class]):not([id]) { grid-column:1; grid-row:5 / 8; align-self:start; }
 .desktop .welcome-card>button,.desktop .welcome-card>.caption,.desktop #welcome-error { grid-column:2; }
 .desktop .welcome-card>button { margin-top:12px; }
+
+.native-input:focus { outline:2px solid #819264; }
+#app.keyboard-open { height:var(--keyboard-height); }
