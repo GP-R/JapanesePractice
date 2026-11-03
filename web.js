@@ -2,11 +2,6 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  // Choose once per session so resizing never resets a study session or an unfinished form.
-  const desktop = !(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) &&
-    matchMedia('(min-width: 960px) and (pointer: fine)').matches;
-  document.documentElement.classList.toggle('desktop', desktop);
   let mode = null, db = null, json = '', previous = '', unity = null, ready = false;
   let writeQueue = Promise.resolve(), pendingWrites = 0, saveFailed = false, releaseLock;
   const inputFields = new Map();
@@ -157,21 +152,23 @@
     const element = document.createElement(d.multiline ? 'textarea' : 'input');
     element.className = 'native-input'; element.spellcheck = false; element.autocomplete = 'off';
     element.setAttribute('autocapitalize','off');
-    element.value = value; // Initialize before focus, when this field has no IME composition.
-    element.addEventListener('compositionstart', () => {
-      if (record.element === element) record.composing = true;
-    });
+    element.value = value;
+    const sendValue = () => {
+      if (inputFields.get(d.id) !== record || element.hidden || element.readOnly) return;
+      send('__HaedokWeb','OnInput',JSON.stringify({id:d.id,value:element.value}));
+    };
+    element.addEventListener('compositionstart', () => { record.composing = true; });
     element.addEventListener('compositionend', () => {
-      if (record.element === element) record.composing = false;
+      record.composing = false;
+      // Some keyboards end composition without a separate final input event.
+      if (d.typing) sendValue();
     });
     element.addEventListener('input', event => {
-      // A retired field may emit its final composition event during the focus handoff.
-      if (record.element !== element) return;
-      if (event.isComposing) record.composing = true;
-      send('__HaedokWeb','OnInput',JSON.stringify({id:record.descriptor.id,value:element.value}));
+      // A typing answer can advance the card and clear this field. Wait until the
+      // Japanese keyboard has finished editing its composition before grading it.
+      if (d.typing && (event.isComposing || record.composing)) return;
+      sendValue();
     });
-    element.addEventListener('focus', keyboardViewport);
-    element.addEventListener('blur', keyboardViewport);
     return element;
   }
   function configureNativeInput(record) {
@@ -195,47 +192,33 @@
         $('player-area').appendChild(record.element);
       }
       record.descriptor = d;
-      if (record.element.value !== d.value && record.composing) {
-        // Never overwrite a live IME composition: iOS can stop accepting text and
-        // desktop IMEs can resurrect the previous answer. Keep the keyboard session
-        // by focusing the new field while the old field is still attached and focused.
-        const previous = record.element, focused = document.activeElement === previous;
-        record.element = createNativeInput(record, d.value);
-        record.composing = false;
-        record.element.style.cssText = previous.style.cssText;
-        configureNativeInput(record);
-        $('player-area').appendChild(record.element);
-        if (focused && !record.element.hidden && !d.readOnly) record.element.focus({preventScroll:true});
-        previous.remove();
-      } else if (record.element.value !== d.value) record.element.value = d.value;
+      if (!record.composing && record.element.value !== d.value) record.element.value = d.value;
       configureNativeInput(record);
-      // Desktop typing starts focused. Touch screens use the real, already-present input.
-      if (created && d.typing && !touchInput() && !modalOpen()) record.element.focus({preventScroll:true});
     }
-    keyboardViewport();
+    positionInputs();
   }
-  window.addEventListener('pointerdown', event => {
+  window.addEventListener('click', event => {
     const active = document.activeElement;
     if (active?.classList.contains('native-input') && event.target !== active) active.blur();
-  }, true);
+  });
   window.addEventListener('keydown', event => {
-    const shortcut = ['F1','F2','F3','F4'].includes(event.key);
-    if (modalOpen()) {
-      if (shortcut) { event.preventDefault(); event.stopImmediatePropagation(); }
-      return;
-    }
-    if (shortcut && [...inputFields.values()].some(record => record.descriptor.typing)) {
-      event.preventDefault(); event.stopImmediatePropagation();
-      if (!event.repeat) send('__HaedokWeb','OnShortcut',event.key);
-    } else if (event.target.classList?.contains('native-input')) event.stopImmediatePropagation();
+    if (event.target.classList?.contains('native-input')) event.stopImmediatePropagation();
   }, true);
   window.addEventListener('keyup', event => {
     if (event.target.classList?.contains('native-input')) event.stopImmediatePropagation();
   }, true);
-  window.addEventListener('resize',keyboardViewport);
-  window.addEventListener('scroll',keyboardViewport,{passive:true});
-  window.visualViewport?.addEventListener('resize',keyboardViewport);
-  window.visualViewport?.addEventListener('scroll',keyboardViewport,{passive:true});
+  let viewportFrame = 0;
+  function scheduleKeyboardViewport() {
+    if (viewportFrame) return;
+    viewportFrame = requestAnimationFrame(() => {
+      viewportFrame = 0;
+      keyboardViewport();
+    });
+  }
+  window.addEventListener('resize',scheduleKeyboardViewport);
+  window.addEventListener('scroll',scheduleKeyboardViewport,{passive:true});
+  window.visualViewport?.addEventListener('resize',scheduleKeyboardViewport);
+  window.visualViewport?.addEventListener('scroll',scheduleKeyboardViewport,{passive:true});
   new ResizeObserver(positionInputs).observe($('unity-canvas'));
   window.addEventListener('beforeunload', event => {
     if ((mode === 'local' && (pendingWrites || saveFailed)) || (mode === 'cloud' && window.HaedokCloud.pending())) { event.preventDefault(); event.returnValue = ''; }
@@ -273,7 +256,7 @@
     } catch (failure) { error(failure.message); }
   };
   window.HaedokWeb = {
-    readSave:() => json, isTrial:() => mode === 'trial', isDesktop:() => desktop, save, download, openCsv, syncInputs, showAbout, error,
+    readSave:() => json, isTrial:() => mode === 'trial', save, download, openCsv, syncInputs, showAbout, error,
     attach:instance => { unity = instance; if (ready) $('loading').hidden = true; },
     failed:message => {
       $('loading').querySelector('strong').textContent = '저장 기록을 확인해 주세요';

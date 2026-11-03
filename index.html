@@ -7,7 +7,7 @@
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>회독 — 나의 일본어 서재</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="web.css?v=20261022-ime2">
+  <link rel="stylesheet" href="web.css?v=mobile-only-1">
 </head>
 <body>
   <section id="welcome" aria-labelledby="welcome-title">
@@ -46,7 +46,6 @@
       <button id="about-guide">앱 사용 안내</button>
       <button id="home">시작 화면</button>
     </nav>
-    <p class="caption">PC 타자연습: F1 후리가나 · F2 뜻 표시<br>F3 즐겨찾기 · F4 이전 단어</p>
   </dialog>
   <dialog id="cloud-dialog" aria-labelledby="cloud-title" aria-describedby="cloud-description">
     <h2 id="cloud-title"></h2>
@@ -77,6 +76,7 @@
       window.HaedokWeb.attach(instance);
     };
   </script>
-  <script src="web.js?v=20261022-ime2"></script>
+  <script src="web.js?v=mobile-ime-2"></script>
+  <script src="input-diagnostics.js?v=mobile-only-1"></script>
 </body>
 </html>

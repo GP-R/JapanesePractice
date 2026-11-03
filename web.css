@@ -37,15 +37,5 @@ progress { width:70%; height:8px; margin-top:22px; accent-color:var(--accent); }
 #web-error { margin:0; padding:8px 12px; font-size:12px; background:#fbe9e2; }
 .native-input { position:absolute; z-index:10; margin:0; padding:8px 12px; border:0; border-radius:12px; outline:none; font-family:system-ui,sans-serif; resize:none; box-sizing:border-box; }
 
-/* PC shell. Learning layouts are authored in Prefabs/Desktop, not in CSS. */
-.desktop #app { max-width:1600px; min-width:960px; min-height:640px; border-inline:1px solid #e1e6d7; }
-.desktop #welcome { background:radial-gradient(ellipse at 20% 40%,#e8eddf,transparent 65%); }
-.desktop .welcome-card { width:860px; display:grid; grid-template-columns:1.15fr 1fr; column-gap:70px; align-items:center; }
-.desktop .welcome-card .eyebrow { grid-column:1; grid-row:1; align-self:end; }
-.desktop .welcome-card h1 { grid-column:1; grid-row:2 / 5; font-size:42px; align-self:start; }
-.desktop .welcome-card>p:not([class]):not([id]) { grid-column:1; grid-row:5 / 8; align-self:start; }
-.desktop .welcome-card>button,.desktop .welcome-card>.caption,.desktop #welcome-error { grid-column:2; }
-.desktop .welcome-card>button { margin-top:12px; }
-
 .native-input:focus { outline:2px solid #819264; }
 #app.keyboard-open { top:var(--keyboard-top); height:var(--keyboard-height); }
