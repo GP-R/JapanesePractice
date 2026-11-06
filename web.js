@@ -202,6 +202,18 @@
     if (active?.classList.contains('native-input') && event.target !== active) active.blur();
   });
   window.addEventListener('keydown', event => {
+    const shortcut = ['F1','F2','F3','F4'].includes(event.key);
+    if (shortcut && modalOpen()) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+    if (shortcut && [...inputFields.values()].some(record => record.descriptor.typing)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (!event.repeat) send('__HaedokWeb','OnShortcut',event.key);
+      return;
+    }
     if (event.target.classList?.contains('native-input')) event.stopImmediatePropagation();
   }, true);
   window.addEventListener('keyup', event => {
